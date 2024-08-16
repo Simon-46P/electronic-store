@@ -6,7 +6,6 @@ $dbContext = new DBContext();
 if (isset($_GET['id'])) {
     $productId = htmlspecialchars($_GET['id']);
 
-
     $product = $dbContext->getProduct($productId);
 
     if ($product) {
@@ -17,7 +16,7 @@ if (isset($_GET['id'])) {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title><?php echo "{$product->title} - Product Details"; ?></title>
-    <link href="/css/styles.css" rel="stylesheet" />
+            <link href="/css/styles.css" rel="stylesheet" />
         </head>
         <body>
             <div class="container py-4">
@@ -27,9 +26,11 @@ if (isset($_GET['id'])) {
                     <p>ID: <?php echo $product->id; ?></p>
                     <p>Price: <?php echo $product->price; ?></p>
                     <p>Popularity: <?php echo $product->popularity; ?></p>
-                    <p>Stock Level: <?php echo $product->stockLevel; ?></p>
+                    <p>Stock Level: <?php echo $product->stockLevel; ?></p>  
                 </div>
             </div>
+
+           
         </body>
         </html>
         <?php

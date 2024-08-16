@@ -1,16 +1,18 @@
 <?php
+
 require_once('Models/Product.php');
 require_once('Models/Category.php');
 require_once("vendor/autoload.php");
 
-class DBContext{
+class DBContext {
 
     private $pdo;
-    
+    private $apiUrl;
+
     function __construct() {  
-        
         $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
         $dotenv->load();
+        $this->apiUrl = $_ENV['apiurl'];
 
         $host = $_ENV['host'];
         $db   = $_ENV['db'];
@@ -22,55 +24,101 @@ class DBContext{
         $this->seedfNotSeeded();
     }
 
+    private function fetchAllProductsFromAPI() {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "{$this->apiUrl}/products");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+
+        $response = curl_exec($ch);
+        
+
+        if (curl_errno($ch)) {
+            die('cURL error: ' . curl_error($ch));
+        }
+
+        curl_close($ch);
+        $allProducts = json_decode($response, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            die('JSON decoding error: ' . json_last_error_msg());
+        }
+
+        return $allProducts;
+    }
+
+    function getAllProducts($sortCol = null, $sortOrder = null, $searchQuery = null)
+    {
+        $products = $this->fetchAllProductsFromAPI();
+
+        // Apply search filter
+        if ($searchQuery) {
+            $products = array_filter($products, function($product) use ($searchQuery) {
+                return stripos($product['title'], $searchQuery) !== false;
+            });
+        }
+
+        // Apply sorting
+        if ($sortCol && $sortOrder) {
+            usort($products, function($a, $b) use ($sortCol, $sortOrder) {
+                if (!isset($a[$sortCol]) || !isset($b[$sortCol])) {
+                    return 0;
+                }
+                if ($a[$sortCol] == $b[$sortCol]) {
+                    return 0;
+                }
+                if ($sortOrder == 'asc') {
+                    return ($a[$sortCol] < $b[$sortCol]) ? -1 : 1;
+                } else {
+                    return ($a[$sortCol] > $b[$sortCol]) ? -1 : 1;
+                }
+            });
+        }
+
+        return $products;
+    }
+ 
+    function getProduct($id)
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "{$this->apiUrl}/product/{$id}");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+
+        $response = curl_exec($ch);
+
+        if (curl_errno($ch)) {
+            die('cURL error: ' . curl_error($ch));
+        }
+
+        curl_close($ch);
+        $product = json_decode($response, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            die('JSON decoding error: ' . json_last_error_msg());
+        }
+
+        return $product;
+    }
+
     function getAllCategories(){
         return $this->pdo->query('SELECT * FROM category')->fetchAll(PDO::FETCH_CLASS, 'Category');
-        
-    }
-    
-
-
-
-function getAllProducts($sortCol = null, $sortOrder = null, $searchQuery = null)
-{
-    $sql = "SELECT * FROM products";
-
-    if ($searchQuery) {
-        $sql .= " WHERE title LIKE ?";
-        $params = ["%$searchQuery%"];
-    } else {
-        $params = [];
     }
 
-    if ($sortCol && $sortOrder) {
-        $sql .= " ORDER BY $sortCol $sortOrder";
+    function getProductByTitle($title, $sortCol = null, $sortOrder = null)
+    {
+        $sql = "SELECT * FROM products WHERE title LIKE ?";
+        $params = ["%$title%"];
+
+        if ($sortCol && $sortOrder) {
+            $sql .= " ORDER BY $sortCol $sortOrder";
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_CLASS, 'Product');
     }
-
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->execute($params);
-
-    return $stmt->fetchAll(PDO::FETCH_CLASS, 'Product');
-}
-
-    function getProduct($id){
-        $prep = $this->pdo->prepare('SELECT * FROM products where id=:id');
-        $prep->setFetchMode(PDO::FETCH_CLASS,'Product');
-        $prep->execute(['id'=> $id]);
-        return  $prep->fetch();
-    }
-function getProductByTitle($title, $sortCol = null, $sortOrder = null)
-{
-    $sql = "SELECT * FROM products WHERE title LIKE ?";
-    $params = ["%$title%"];
-
-    if ($sortCol && $sortOrder) {
-        $sql .= " ORDER BY $sortCol $sortOrder";
-    }
-
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->execute($params);
-
-    return $stmt->fetchAll(PDO::FETCH_CLASS, 'Product');
-}
 
     function getCategoryByTitle($title) : Category | false{
         $prep = $this->pdo->prepare('SELECT * FROM category where title=:title');
@@ -79,36 +127,36 @@ function getProductByTitle($title, $sortCol = null, $sortOrder = null)
         return  $prep->fetch();
     }
 
-function getProductsByCategory($categoryTitle, $sortCol = null, $sortOrder = null, $searchQuery = null)
-{
-    if ($sortCol == null) {
-        $sortCol = "Id";
+    function getProductsByCategory($categoryTitle, $sortCol = null, $sortOrder = null, $searchQuery = null)
+    {
+        if ($sortCol == null) {
+            $sortCol = "id";
+        }
+        if ($sortOrder == null) {
+            $sortOrder = "asc";
+        }
+
+        $category = $this->getCategoryByTitle($categoryTitle);
+        if (!$category) {
+            return [];
+        }
+
+        $sql = "SELECT * FROM products WHERE categoryId = :categoryId";
+
+        if ($searchQuery) {
+            $sql .= " AND title LIKE '%" . $searchQuery . "%'";
+        }
+
+        $sql .= " ORDER BY $sortCol $sortOrder";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':categoryId', $category->id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_CLASS, 'Product');
     }
-    if ($sortOrder == null) {
-        $sortOrder = "asc";
-    }
 
-    $category = $this->getCategoryByTitle($categoryTitle);
-    if (!$category) {
-        return [];
-    }
-
-    $sql = "SELECT * FROM products WHERE categoryId = :categoryId";
-
-    if ($searchQuery) {
-        $sql .= " AND title LIKE '%" . $searchQuery . "%'";
-    }
-
-    $sql .= " ORDER BY $sortCol $sortOrder";
-
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->bindValue(':categoryId', $category->id, PDO::PARAM_INT);
-    $stmt->execute();
-
-    return $stmt->fetchAll(PDO::FETCH_CLASS, 'Product');
-}
-
-     function getPopularProducts($limit = 10) {
+    function getPopularProducts($limit = 10) {
         $query = "SELECT * FROM products ORDER BY popularity DESC LIMIT :limit";
         $statement = $this->pdo->prepare($query);
         $statement->bindParam(':limit', $limit, PDO::PARAM_INT);
@@ -116,7 +164,6 @@ function getProductsByCategory($categoryTitle, $sortCol = null, $sortOrder = nul
 
         return $statement->fetchAll(PDO::FETCH_OBJ);
     }
-
     function seedfNotSeeded(){
         static $seeded = false;
         if($seeded) return;

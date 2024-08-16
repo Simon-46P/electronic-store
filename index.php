@@ -9,6 +9,33 @@ $searchQuery = $_GET['searchedProduct'] ?? "";
 $selectedCategory = $_GET['selectedCategory'] ?? "";
 
 
+function getCSVfromAPI() {
+
+$ch = curl_init();
+$url = "https://electronics-api.vercel.app/products";
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+
+if (curl_errno($ch)) {
+    
+    echo 'Error:' . curl_error($ch);
+} else {
+    header("Content-Type: text/csv");
+
+    $data = json_decode($response, true);
+
+    foreach($data as $row) {
+        echo ($row["id"].",".$row["title"]."\n");
+    }
+}
+
+curl_close($ch);
+
+
+
+}
+
 
 if ($selectedCategory) {
     $allProducts = $dbContext->getProductsByCategory($selectedCategory, $sortCol, $sortOrder, $searchQuery);
@@ -78,6 +105,8 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
                 </li>
                 <li class="nav-item"><a class="nav-link" href="#!">Login</a></li>
                 <li class="nav-item"><a class="nav-link" href="#!">Create account</a></li>
+                <li class="nav-item"><a class="nav-link" href="/dashboard.php">Dashboard</a></li>
+
             </ul>
             <form class="d-flex" method="GET" action="">
                 <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" name="searchedProduct" value="<?php echo htmlspecialchars($searchQuery); ?>">
@@ -89,10 +118,6 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
 </nav>
 
 <!-- Section-->
-<form method="POST" action="">
-
-   <input type="submit" name="csvButton" value="Download as csv">
-</form>
 
 <section class="py-5">
     <!-- Section for Popular Products-->
@@ -157,44 +182,12 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
         <?php } ?>
     </a>
 </th>
-<?php
-// URL of your API endpoint
- $apiUrl = $_ENV['apiurl'];
 
-
-// Initialize cURL session
-$ch = curl_init();
-
-// Set cURL options
-curl_setopt($ch, CURLOPT_URL, "{$apiUrl}/products");
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-
-// Execute cURL request
-$response = curl_exec($ch);
-
-// Check for cURL errors
-if (curl_errno($ch)) {
-    die('cURL error: ' . curl_error($ch));
-}
-
-// Close cURL session
-curl_close($ch);
-
-
-// Decode the JSON response into an associative array
-$allProducts = json_decode($response, true);
-
-// Check for JSON decoding errors
-if (json_last_error() !== JSON_ERROR_NONE) {
-    die('JSON decoding error: ' . json_last_error_msg());
-}
-?>
 
             </tr>
             </thead>
             <tbody>
-        <?php
+    <?php
         if (!empty($allProducts)) {
             foreach ($allProducts as $product) {
                 echo "<tr class='product-row' data-product-id='{$product['id']}'>";
@@ -208,6 +201,7 @@ if (json_last_error() !== JSON_ERROR_NONE) {
             echo "<tr><td colspan='4'>No products available.</td></tr>";
         }
         ?>
+
     </tbody>
         </table>
     </div>
@@ -221,7 +215,6 @@ if (json_last_error() !== JSON_ERROR_NONE) {
 <!-- Bootstrap core JS-->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Core theme JS-->
-<script src="js/scripts.js"></script>
 <script>
     //Row click nav
     document.addEventListener('DOMContentLoaded', () => {
