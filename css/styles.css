@@ -11205,3 +11205,9 @@ fieldset:disabled .btn {
   gap: 10px;
   margin-top: 24px;
 }
+.csv {
+  border: none;
+  background-color: transparent;
+  padding-top: 8px;
+  color: darkgrey;
+}

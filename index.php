@@ -31,17 +31,9 @@ if (curl_errno($ch)) {
 }
 
 curl_close($ch);
-
-
-
 }
 
-
-if ($selectedCategory) {
-    $allProducts = $dbContext->getProductsByCategory($selectedCategory, $sortCol, $sortOrder, $searchQuery);
-} else {
-    $allProducts = $dbContext->getAllProducts($sortCol, $sortOrder, $searchQuery);
-}
+$allProducts = $dbContext->getAllProducts($sortCol, $sortOrder, $searchQuery);
 
 function getCsv($allProducts) {
 header("Content-Type: text/csv");
@@ -64,7 +56,6 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
         getCsv($dbContext->getAllProducts($sortCol, $sortOrder));
     }
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -90,22 +81,12 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Categories</a>
-                    <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="?selectedCategory=">All Products</a></li>
-                        <li><hr class="dropdown-divider" /></li>
-                        <?php
-                        foreach ($dbContext->getAllCategories() as $category) {
-                            $isActive = ($selectedCategory == $category->title) ? 'active' : '';
-                            echo "<li><a class='dropdown-item $isActive' href='?selectedCategory=" . urlencode($category->title) . "&searchedProduct=" . urlencode($searchQuery) . "'>{$category->title}</a></li>";
-                        }
-                        ?>
-                    </ul>
-                </li>
+          
                 <li class="nav-item"><a class="nav-link" href="#!">Login</a></li>
                 <li class="nav-item"><a class="nav-link" href="#!">Create account</a></li>
-                <li class="nav-item"><a class="nav-link" href="/dashboard.php">Dashboard</a></li>
+                <form method="POST" action="">
+                    <input type="submit" name="csvButton" value="Download as csv" class="csv">
+                </form>
 
             </ul>
             <form class="d-flex" method="GET" action="">
@@ -120,31 +101,7 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
 <!-- Section-->
 
 <section class="py-5">
-    <!-- Section for Popular Products-->
-<div class="container px-4 px-lg-5 mt-5">
-    <h2 class="popular-products-toggle">Popular Products <i class="bi bi-chevron-down"></i></h2>
-    <div class="popular-products">
-        <div class="row">
-            <?php
-            $popularProducts = $dbContext->getPopularProducts();
 
-            foreach ($popularProducts as $product) {
-                echo "<div class='col-md-3 mb-4'>";
-                echo "<div class='card'>";
-                echo "<div class='card-body'>";
-                echo "<h5 class='card-title'>{$product->title}</h5>";
-                echo "<p class='card-text'>Category: {$product->categoryId}</p>";
-                echo "<p class='card-text'>Price: {$product->price}</p>";
-                echo "<p class='card-text'>Stock Level: {$product->stockLevel}</p>";
-                echo "<a href='product.php?id={$product->id}' class='btn btn-primary'>View Details</a>";
-                echo "</div>";
-                echo "</div>";
-                echo "</div>";
-            }
-            ?>
-        </div>
-    </div>
-</div>
 
     <div class="container px-4 px-lg-5 mt-5">
         <table class="table">
@@ -182,8 +139,6 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
         <?php } ?>
     </a>
 </th>
-
-
             </tr>
             </thead>
             <tbody>
@@ -226,23 +181,8 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
                     window.location.href = `product.php?id=${productId}`;
                 }
             });
-        });
-
-        const popularProductsContainer = document.querySelector('.popular-products');
-        const popularProductsToggle = document.querySelector('.popular-products-toggle');
-
-        //popular toggle
-        popularProductsToggle.addEventListener('click', () => {
-            if (popularProductsContainer.style.display === 'none') {
-                popularProductsContainer.style.display = 'block';
-                popularProductsToggle.innerHTML = 'Popular Products <i class="bi bi-chevron-up"></i>';
-            } else {
-                popularProductsContainer.style.display = 'none';
-                popularProductsToggle.innerHTML = 'Popular Products <i class="bi bi-chevron-down"></i>';
-            }
-        });
+        }); 
     });
 </script>
-
 </body>
 </html>
