@@ -84,6 +84,8 @@ if ($_SERVER ["REQUEST_METHOD"] == "POST") {
           
                 <li class="nav-item"><a class="nav-link" href="#!">Login</a></li>
                 <li class="nav-item"><a class="nav-link" href="#!">Create account</a></li>
+                <li class="nav-item"><a class="nav-link" href="newproduct.php">Add new product</a></li>
+
                 <form method="POST" action="">
                     <input type="submit" name="csvButton" value="Download as csv" class="csv">
                 </form>
